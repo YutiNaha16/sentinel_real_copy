@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SENTINEL Crisis — Interactive Prototype (Phase 1)</title>
+<style>
+:root{
+  --bg:#eef1f5; --panel:#fff; --panel-soft:#f7f9fc; --ink:#0d1520; --muted:#647085;
+  --line:#e0e6ee; --line-strong:#c8d2df; --brand:#2f6f9f; --brand-strong:#245980; --brand-soft:#e8f1f8;
+  --l0:#2f9e44; --l0-soft:#e9f7ee; --l1:#f59f00; --l1-soft:#fff6e5; --l2:#e8590c; --l2-soft:#fdecdf;
+  --l3:#c92a2a; --l3-soft:#fbe9e9; --good:#2b8a3e; --good-soft:#e9f7ee; --warn:#b7791f; --warn-soft:#fff5d6;
+  --bad:#c92a2a; --bad-soft:#fbe9e9; --shadow:0 14px 38px rgba(15,23,42,.07); --shadow-sm:0 4px 14px rgba(15,23,42,.05);
+  --r-lg:16px; --r-md:11px; --r-sm:8px;
+  --sans:'Inter',ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.4}
+h1,h2,h3,h4,h5{margin:0}
+a{color:inherit}
+
+.app{display:grid;grid-template-columns:238px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;padding:16px;background:#111722;color:#e5e7eb;display:flex;flex-direction:column;gap:12px;overflow:auto}
+.side::-webkit-scrollbar{width:8px}.side::-webkit-scrollbar-thumb{background:#2a3342;border-radius:4px}
+.brand{display:flex;align-items:center;gap:11px;padding-bottom:13px;border-bottom:1px solid rgba(255,255,255,.09)}
+.brand .mark{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,#4d90c4,#2f6f9f);box-shadow:0 8px 20px rgba(47,111,159,.4);font-size:18px}
+.brand h1{font-size:14px;line-height:1.1;font-family:var(--mono);letter-spacing:1px}
+.brand p{margin:3px 0 0;color:#8b97ab;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
+.navlbl{color:#6b7789;text-transform:uppercase;letter-spacing:.09em;font-size:9.5px;font-weight:800;margin:8px 0 2px 4px}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav button{border:0;color:#cdd5e2;background:transparent;text-align:left;padding:9px 10px;border-radius:9px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:12.5px;transition:.15s;width:100%}
+.nav button:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav button.on{background:var(--brand);color:#fff}
+.nav button.hide{display:none}
+.nav .ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;background:rgba(255,255,255,.11);font-size:11px;flex:none}
+.nav .badge{margin-left:auto;font-size:9px;font-weight:800;background:var(--l2);color:#fff;padding:2px 6px;border-radius:5px;font-family:var(--mono)}
+.nav .lock{margin-left:auto;font-size:11px;opacity:.4}
+
+.rolecard{margin-top:auto;padding:11px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);border-radius:12px}
+.rolecard label{display:block;color:#f1f5f9;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.rolecard select{width:100%;margin-top:7px;color:#0f172a;background:#fff;border:0;border-radius:8px;padding:8px;font-weight:600;font-size:12px}
+.rolecard .scope{margin:8px 0 0;color:#8b97ab;font-size:10.5px;line-height:1.45}
+.rolecard .demotag{display:inline-block;margin-top:9px;padding:3px 8px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.05em;background:rgba(47,111,159,.25);color:#a9d0ec;text-transform:uppercase}
+
+.main{padding:20px 26px 60px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+.crumb{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:7px;flex-wrap:wrap;font-family:var(--mono)}
+.crumb a{color:var(--brand-strong);text-decoration:none;font-weight:700;cursor:pointer}
+.crumb a:hover{text-decoration:underline}
+.crumb .sep{opacity:.5}
+.top h2{font-size:22px;line-height:1.15;letter-spacing:-.3px}
+.top .sub{color:var(--muted);font-size:12.5px;margin-top:5px;max-width:640px;line-height:1.5}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.eyebrow{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:800;margin:0 0 7px}
+
+.btn{border:1px solid transparent;border-radius:9px;padding:9px 13px;font-weight:700;font-size:12.5px;transition:.14s;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn.primary{background:var(--brand);color:#fff;box-shadow:0 8px 18px rgba(47,111,159,.22)}
+.btn.primary:hover:not(:disabled){background:var(--brand-strong);transform:translateY(-1px)}
+.btn.ghost{background:var(--brand-soft);color:var(--brand-strong);border-color:#cfe2f0}
+.btn.sec{background:var(--panel);border-color:var(--line);color:var(--ink)}
+.btn.sec:hover:not(:disabled){border-color:var(--line-strong)}
+.btn.sm{padding:6px 10px;font-size:11.5px;border-radius:8px}
+.btn.danger{background:var(--bad-soft);color:var(--bad);border-color:#f2c9c9}
+.btn.good{background:var(--good-soft);color:var(--good);border-color:#c2e6cd}
+.btn.warn{background:var(--warn-soft);color:var(--warn);border-color:#eddca8}
+.btn.big{padding:14px 18px;font-size:14px;border-radius:11px}
+.btn.block{width:100%;justify-content:center}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.pad{padding:17px 19px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 15px;box-shadow:var(--shadow-sm)}
+.kpi .lbl{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.kpi .val{font-size:26px;font-weight:800;margin-top:6px;letter-spacing:-.5px}
+.kpi .val small{font-size:14px;color:var(--muted);font-weight:600}
+.kpi .delta{font-size:11px;font-weight:700;margin-top:3px;color:var(--muted)}
+.kpi .delta.up{color:var(--good)} .kpi .delta.down{color:var(--bad)}
+
+.section-h{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:20px 2px 11px}
+.section-h h3{font-size:15px}
+.section-h .hint{color:var(--muted);font-size:11.5px}
+
+.note{border-radius:var(--r-md);padding:12px 15px;font-size:12px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;line-height:1.5}
+.note.blue{background:var(--brand-soft);border:1px solid #cfe2f0;color:var(--brand-strong)}
+.note.amber{background:var(--warn-soft);border:1px solid #eddca8;color:#8a6410}
+.note .ni{flex:none;font-size:15px}
+
+/* tables / rows */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;padding:10px 14px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line-strong);background:var(--panel-soft);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.clk:hover{background:var(--panel-soft);cursor:pointer}
+.tblwrap{overflow:auto;border-radius:var(--r-lg);border:1px solid var(--line);box-shadow:var(--shadow)}
+
+.sevtag{font-family:var(--mono);font-weight:800;font-size:10.5px;padding:3px 8px;border-radius:5px;color:#fff;letter-spacing:.3px}
+.sev0{background:var(--l0)} .sev1{background:var(--l1)} .sev2{background:var(--l2)} .sev3{background:var(--l3)}
+.statetag{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.3px}
+.st-active{background:var(--l2-soft);color:var(--l2)} .st-resolved{background:var(--good-soft);color:var(--good)}
+.st-notified{background:var(--l1-soft);color:#a86d00} .st-ackd{background:var(--good-soft);color:var(--good)}
+.st-idle{background:#eef1f5;color:var(--muted)} .st-escalated{background:var(--l2-soft);color:var(--l2)}
+.pill{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--panel-soft);border:1px solid var(--line);padding:2px 8px;border-radius:999px}
+.tag{font-family:var(--mono);font-size:9px;font-weight:800;color:var(--brand);border:1px solid #a9d0ec;background:var(--brand-soft);padding:1px 5px;border-radius:4px;text-transform:uppercase}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+
+/* escalation tree */
+.tree{display:flex;flex-direction:column}
+.tnode{display:flex;gap:0;align-items:stretch}
+.trail{display:flex;flex-direction:column;align-items:center;width:28px;flex:none}
+.tdot{width:13px;height:13px;border-radius:50%;margin-top:20px;box-shadow:0 0 0 4px var(--panel),0 0 0 5px var(--line)}
+.tline{width:2px;flex:1;background:var(--line-strong);min-height:20px}
+.tcard{flex:1;display:flex;align-items:center;gap:13px;padding:13px 15px;margin:7px 0;border:1px solid var(--line);border-radius:var(--r-md);background:var(--panel-soft)}
+.tcard.ackd{border-color:var(--l0);background:var(--l0-soft)}
+.tcard.escal{border-color:var(--l2);background:var(--l2-soft)}
+.tcard .who{flex:1}
+.tcard .who b{font-weight:700;font-size:13.5px}
+.tcard .who .role{font-size:11.5px;color:var(--muted);margin-top:1px}
+.tcard .stcol{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.tcard .lat{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.av{width:36px;height:36px;border-radius:9px;background:#dde5ee;color:#3a4657;display:grid;place-items:center;font-weight:700;flex:none;font-size:14px}
+
+/* forms */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--r-sm);font-size:13px;background:#fcfdfe;color:var(--ink)}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,111,159,.14)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.inline{display:flex;align-items:center;gap:8px}
+.check{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:#3a4657;line-height:1.5;cursor:pointer}
+.check input{width:16px;height:16px;margin-top:1px}
+
+/* type tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.tile{display:flex;flex-direction:column;gap:7px;padding:14px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--panel-soft);text-align:left;transition:.14s}
+.tile:hover{border-color:var(--brand);transform:translateY(-1px)}
+.tile.sel{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 1px var(--brand)}
+.tile .nm{font-weight:700;font-size:13.5px}
+.tile .ds{font-size:11px;color:var(--muted)}
+
+/* tabs */
+.tabs{display:flex;gap:5px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;padding:9px 13px;font-weight:700;font-size:12.5px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button:hover{color:var(--ink)}
+.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+.tabpane{display:none}.tabpane.on{display:block}
+
+/* config rows */
+.cfgrow{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.cfgrow:last-child{border-bottom:none}
+.cfgrow .cl{font-weight:700;font-size:12.5px}
+.cfgrow .cl small{display:block;color:var(--muted);font-weight:500;font-size:11px;margin-top:2px}
+.miniinput{display:flex;align-items:center;gap:5px}
+.miniinput input{width:56px;padding:6px 7px;border:1px solid var(--line-strong);border-radius:6px;font-family:var(--mono);font-size:12px;text-align:center;background:#fcfdfe}
+.miniinput select{padding:6px 7px;border:1px solid var(--line-strong);border-radius:6px;font-size:11.5px;background:#fcfdfe}
+.miniinput .u{font-size:11px;color:var(--muted)}
+
+/* modal */
+.modalback{position:fixed;inset:0;background:rgba(13,21,32,.55);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:22px;z-index:60}
+.modalback.show{display:flex}
+.modal{background:var(--panel);border-radius:var(--r-lg);width:100%;max-width:520px;max-height:88vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,.4)}
+.modal .mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 19px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+.modal .mhead h3{font-size:16px}
+.modal .mbody{padding:19px}
+.modal .mfoot{display:flex;gap:9px;justify-content:flex-end;padding:15px 19px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--panel)}
+.x{border:0;background:transparent;font-size:20px;color:var(--muted);line-height:1}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0d1520;color:#fff;padding:12px 20px;border-radius:11px;font-size:13px;font-weight:600;opacity:0;transition:.3s;z-index:80;box-shadow:0 14px 34px rgba(0,0,0,.3);pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* misc */
+.split{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+@media(max-width:900px){.split,.grid2,.grid3{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+.filedrop{border:2px dashed var(--line-strong);border-radius:var(--r-md);padding:26px;text-align:center;background:var(--panel-soft);transition:.15s}
+.filedrop:hover{border-color:var(--brand);background:var(--brand-soft)}
+.filedrop .big{font-size:30px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.legend span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.barrow{display:flex;align-items:center;gap:10px;margin:7px 0}
+.barrow .bl{width:130px;font-size:12px;font-weight:600}
+.bar{flex:1;height:9px;background:var(--panel-soft);border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;border-radius:5px}
+.barrow .bv{font-family:var(--mono);font-size:11.5px;color:var(--muted);width:56px;text-align:right}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="mark">!</div>
+      <div><h1>SENTINEL</h1><p>Crisis Console</p></div>
+    </div>
+    <div class="navlbl">Operations</div>
+    <div class="nav" id="nav">
+      <button data-view="report"><span class="ic">△</span> Report incident</button>
+      <button data-view="live"><span class="ic">◉</span> Live tree <span class="badge" id="liveBadge">1</span></button>
+      <button data-view="log"><span class="ic">▤</span> Incident log</button>
+    </div>
+    <div class="navlbl">Call tree</div>
+    <div class="nav">
+      <button data-view="mytree"><span class="ic">⋔</span> My call tree</button>
+      <button data-view="fulltree"><span class="ic">⊞</span> Full call tree</button>
+      <button data-view="config"><span class="ic">⚙</span> Configuration</button>
+    </div>
+    <div class="navlbl">Oversight</div>
+    <div class="nav">
+      <button data-view="metrics"><span class="ic">▧</span> Metrics</button>
+      <button data-view="audit"><span class="ic">✓</span> Audit trail</button>
+    </div>
+    <div class="rolecard">
+      <label>Demo — view as role</label>
+      <select id="roleSel">
+        <option value="admin">Admin (all access)</option>
+        <option value="member">Member — Prashant</option>
+        <option value="reporter">Reporter — S. Menon</option>
+        <option value="auditor">Auditor (read-only)</option>
+      </select>
+      <p class="scope" id="roleScope"></p>
+      <span class="demotag">Live role switch · no re-login</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div>
+        <div class="crumb" id="crumb"></div>
+        <h2 id="title">—</h2>
+        <div class="sub" id="subtitle"></div>
+      </div>
+      <div class="actions" id="topActions"></div>
+    </div>
+    <div id="screen"></div>
+  </main>
+</div>
+
+<div class="modalback" id="modalBack"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   SENTINEL Crisis — interactive prototype
+   Data layer is in-memory (DB object). Every action that would
+   hit a backend is marked  // API: <endpoint>  so the real
+   service calls drop straight in.
+   ============================================================ */
+
+const RANK = { admin:5, member:2, reporter:1, auditor:1 };
+const ROLE_META = {
+  admin:   {name:"Administrator", who:"admin", av:"A", scope:"Full access · report, live tree, full call tree, configuration, metrics, audit. Edits anywhere. Presenter role with live switching.", views:["report","live","log","mytree","fulltree","config","metrics","audit"]},
+  member:  {name:"Prashant Kamble", who:"member · Network Admin", av:"P", scope:"In-chain member. Reports, acknowledges, sees own slice of the tree, all active incidents in the tree, and team metrics. Edits only below self.", views:["report","live","log","mytree","metrics"]},
+  reporter:{name:"S. Menon", who:"reporter · Facilities", av:"S", scope:"Raises incidents and tracks their own. No call tree, no org metrics.", views:["report","log"]},
+  auditor: {name:"Audit & Compliance", who:"auditor · read-only", av:"◈", scope:"Read-only oversight — incident log, metrics, and the full audit trail. No actions.", views:["log","metrics","audit"]},
+};
+
+/* ---- incident-type -> default severity mapping (admin-editable) ---- */
+let TYPES = [
+  {id:"breach", name:"Suspected breach", sev:3, desc:"Confirmed or suspected intrusion / data exposure"},
+  {id:"outage", name:"Network outage",   sev:2, desc:"Multiple users or a site offline"},
+  {id:"malware",name:"Malware / ransomware", sev:3, desc:"Malicious code detected on endpoints"},
+  {id:"degraded",name:"Service degraded", sev:1, desc:"Slow or partial service, workaround exists"},
+  {id:"single", name:"Single-user issue", sev:1, desc:"One person affected"},
+  {id:"phish",  name:"Suspicious email",  sev:0, desc:"Phishing / anomaly reported, no impact yet"},
+];
+
+/* ---- the IT/Cyber escalation matrix (nodes) ---- */
+let NODES = [
+  {id:"n1", name:"Prashant Kamble", role:"Technical Administrator – Network", email:"prashant.kamble@sodexo.com", phone:"+91 99677 59639", parent:null, backup:"n2", order:1},
+  {id:"n2", name:"Nurul Qureshi",   role:"Lead – Infrastructure, Security & Compliance", email:"Nurul.QURESHI@sodexo.com", phone:"+91 98198 48222", parent:"n1", backup:"n3", order:2},
+  {id:"n3", name:"Anupam Singh",    role:"Tech Data Digital & Innovation Director", email:"Anupam.Singh@sodexo.com", phone:"+91 86188 79550", parent:"n2", backup:null, order:3},
+];
+
+/* ---- per-level escalation config ---- */
+let CONFIG = {
+  levels:[
+    {lvl:0, mode:"Sequential", timeout:30, tunit:"min", remind:10, runit:"min", retries:2},
+    {lvl:1, mode:"Sequential", timeout:15, tunit:"min", remind:5,  runit:"min", retries:3},
+    {lvl:2, mode:"Parallel",   timeout:10, tunit:"min", remind:5,  runit:"min", retries:3},
+    {lvl:3, mode:"Parallel",   timeout:5,  tunit:"min", remind:2,  runit:"min", retries:4},
+  ],
+  reopenWindow:3, reopenUnit:"days",
+  retentionMonths:18,
+};
+
+/* ---- incidents (seeded) ---- */
+let INCIDENTS = [
+  { id:"INC-142307", type:"outage", sev:2, loc:"Core switch, DC-2", what:"Core switch unresponsive, ~40 users offline",
+    reporter:"S. Menon", anon:false, status:"active", created:"14:23:07", createdFull:"Today 14:23",
+    chain:[
+      {node:"n1", state:"ackd", notifiedAt:"14:23:07", ackAt:"14:23:41", lat:"34s"},
+      {node:"n2", state:"notified", notifiedAt:"14:23:07", ackAt:null, lat:"waiting"},
+      {node:"n3", state:"notified", notifiedAt:"14:23:07", ackAt:null, lat:"waiting"},
+    ], closeReason:null },
+  { id:"INC-138802", type:"phish", sev:0, loc:"Mailbox — finance team", what:"Suspicious email reported by user",
+    reporter:"Anonymous", anon:true, status:"resolved", created:"11:04:12", createdFull:"Today 11:04",
+    chain:[ {node:"n1", state:"ackd", notifiedAt:"11:04:12", ackAt:"11:09:30", lat:"5m 18s"} ], closeReason:"Confirmed phishing — blocked sender, user coached" },
+  { id:"INC-134120", type:"breach", sev:3, loc:"VPN gateway", what:"Unusual outbound traffic flagged by SIEM",
+    reporter:"A. Roy", anon:false, status:"resolved", created:"Yesterday 16:40", createdFull:"Yesterday 16:40",
+    chain:[
+      {node:"n1", state:"ackd", notifiedAt:"16:40:00", ackAt:"16:41:12", lat:"1m 12s"},
+      {node:"n2", state:"ackd", notifiedAt:"16:40:00", ackAt:"16:43:05", lat:"3m 05s"},
+      {node:"n3", state:"ackd", notifiedAt:"16:40:00", ackAt:"16:52:40", lat:"12m 40s"},
+    ], closeReason:"False positive — sanctioned backup job" },
+];
+
+/* ---- audit logs (separate: user actions vs config changes) ---- */
+let AUDIT_USER = [
+  {t:"14:23:41", who:"Prashant Kamble", act:"Acknowledged", tgt:"INC-142307 · via email link"},
+  {t:"14:23:07", who:"S. Menon", act:"Reported incident", tgt:"INC-142307 · severity L2 (auto from type)"},
+  {t:"11:09:30", who:"Prashant Kamble", act:"Closed incident", tgt:"INC-138802 · reason: confirmed phishing"},
+  {t:"Yesterday", who:"A. Roy", act:"Closed incident", tgt:"INC-134120 · reason: false positive"},
+];
+let AUDIT_CFG = [
+  {t:"2 days ago", who:"Administrator", act:"Changed L2 escalation timeout", tgt:"10 min → 5 min"},
+  {t:"3 days ago", who:"Administrator", act:"Added node to IT/Cyber tree", tgt:"Anupam Singh · 3rd point of contact"},
+  {t:"3 days ago", who:"Administrator", act:"Edited severity mapping", tgt:"Network outage → L2"},
+];
+
+/* ---- app state ---- */
+const SKEY="sentinel_demo_role";
+let state = { role: sessionStorage.getItem(SKEY) || "admin", view:"report",
+              reportType:null, reportAnon:false, activeIncident:"INC-142307" };
+</script>
+<script>
+/* ============ helpers ============ */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const node=id=>NODES.find(n=>n.id===id);
+const typeById=id=>TYPES.find(t=>t.id===id);
+function can(action){
+  const r=RANK[state.role]||0;
+  switch(action){
+    case "report": return state.role!=="auditor";
+    case "acknowledge": return state.role==="member"||state.role==="admin";
+    case "close": return state.role==="member"||state.role==="admin";
+    case "editTreeAll": return state.role==="admin";
+    case "editTreeBelow": return state.role==="member"||state.role==="admin";
+    case "config": return state.role==="admin";
+    case "downloadReport": return state.role==="admin"||state.role==="auditor";
+    case "reopen": return state.role==="admin";
+    default: return true;
+  }
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("show"),2600);}
+function sevTag(s){return `<span class="sevtag sev${s}">L${s}</span>`;}
+function openModal(html){$("#modal").innerHTML=html;$("#modalBack").classList.add("show");}
+function closeModal(){$("#modalBack").classList.remove("show");}
+$("#modalBack").onclick=e=>{if(e.target.id==="modalBack")closeModal();};
+const SEV_NAME=["Hazard","Minor","Major","Critical"];
+const stateLabel={idle:"Waiting in chain",notified:"Notified",escalated:"Escalated",ackd:"Acknowledged"};
+const stateCls={idle:"st-idle",notified:"st-notified",escalated:"st-escalated",ackd:"st-ackd"};
+
+/* ============ boot / nav ============ */
+function boot(){
+  const rm=ROLE_META[state.role];
+  $("#roleSel").value=state.role;
+  $("#roleScope").textContent=rm.scope;
+  // nav visibility by role
+  $$("#nav button, .nav button").forEach(b=>{
+    if(!b.dataset.view)return;
+    b.classList.toggle("hide",!rm.views.includes(b.dataset.view));
+  });
+  if(!rm.views.includes(state.view)) state.view=rm.views[0];
+  render();
+}
+function setNav(){$$(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===state.view));}
+$$(".nav button").forEach(b=>{ if(b.dataset.view) b.onclick=()=>{state.view=b.dataset.view;render();}; });
+$("#roleSel").onchange=e=>{state.role=e.target.value;sessionStorage.setItem(SKEY,state.role);state.view=ROLE_META[state.role].views[0];boot();};
+
+/* ============ render dispatch ============ */
+function render(){
+  setNav();
+  const activeCount=INCIDENTS.filter(i=>i.status==="active").length;
+  $("#liveBadge").style.display=activeCount?"":"none";
+  $("#liveBadge").textContent=activeCount;
+  $("#topActions").innerHTML="";
+  const V={report:viewReport,live:viewLive,log:viewLog,mytree:viewMyTree,fulltree:viewFullTree,config:viewConfig,metrics:viewMetrics,audit:viewAudit}[state.view];
+  V();
+}
+
+/* ============ REPORT ============ */
+function viewReport(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>Report incident`;
+  $("#title").textContent="Report an incident";
+  $("#subtitle").textContent="Pick what happened — severity is set automatically from the incident type and can be overridden. Two steps to send.";
+  if(!can("report")){ $("#screen").innerHTML=`<div class="note amber"><span class="ni">🔒</span><div>The Auditor role is read-only and cannot raise incidents. Switch to Admin, Member or Reporter to use this screen.</div></div>`; return; }
+  const t=state.reportType?typeById(state.reportType):null;
+  let h=`<div class="card pad">
+    <p class="eyebrow">Step 1 · What happened?</p>
+    <div class="tiles">`+TYPES.map(ty=>`
+      <button class="tile ${state.reportType===ty.id?'sel':''}" data-type="${ty.id}">
+        <div class="inline" style="justify-content:space-between">${sevTag(ty.sev)}<span class="pill">auto</span></div>
+        <span class="nm">${ty.name}</span><span class="ds">${ty.desc}</span></button>`).join("")+`</div>`;
+  if(t){
+    h+=`<div style="margin-top:18px" class="grid2">
+      <div class="field"><label>Location</label><input id="rLoc" placeholder="e.g. Data centre, Rack 4" value=""></div>
+      <div class="field"><label>Severity (override if needed)</label>
+        <select id="rSev">${[0,1,2,3].map(s=>`<option value="${s}" ${t.sev===s?'selected':''}>L${s} · ${SEV_NAME[s]}${t.sev===s?' (default)':''}</option>`).join("")}</select></div>
+    </div>
+    <div class="field"><label>What is happening?</label><textarea id="rWhat" rows="2" placeholder="Short description of the incident"></textarea></div>
+    <label class="check"><input type="checkbox" id="rAnon" ${state.reportAnon?'checked':''}> <span><b>Report anonymously</b> — your name won't be attached. <span class="muted">Note: anonymous reports can only be re-opened by an admin.</span></span></label>
+    <div style="margin-top:18px">${
+      t.sev>=2
+      ? `<button class="btn danger big block" id="sendBtn">🔒 Send L${t.sev} alert — confirm required</button>`
+      : `<button class="btn primary big block" id="sendBtn">▲ Send L${t.sev} alert</button>` }</div>`;
+  } else {
+    h+=`<div class="note blue" style="margin-top:18px"><span class="ni">↑</span><div>Select an incident type to continue. Severity is pre-filled from the type — you can override it in the next step.</div></div>`;
+  }
+  h+=`</div>`;
+  $("#screen").innerHTML=h;
+  $$("[data-type]").forEach(b=>b.onclick=()=>{state.reportType=b.dataset.type;render();});
+  const sb=$("#sendBtn");
+  if(sb) sb.onclick=()=>{
+    state.reportAnon=$("#rAnon").checked;
+    const sev=+$("#rSev").value, loc=$("#rLoc").value||"(location not specified)", what=$("#rWhat").value||t.name;
+    if(sev>=2) confirmHighSev(sev,loc,what); else fireIncident(sev,loc,what);
+  };
+}
+function confirmHighSev(sev,loc,what){
+  const mode=CONFIG.levels[sev].mode;
+  openModal(`<div class="mhead"><h3>Confirm L${sev} ${SEV_NAME[sev]} alert</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="mbody">
+      <div class="note ${sev===3?'amber':'blue'}"><span class="ni">⚠</span><div>This is a <b>${mode.toLowerCase()}</b> alert — it notifies ${mode==='Parallel'?'<b>everyone in the chain at once</b>':'the first contact, then escalates'}. Use L${sev} only for genuine ${SEV_NAME[sev].toLowerCase()} incidents.</div></div>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:6px">Recipients: ${NODES.map(n=>n.name.split(' ')[0]).join(', ')}.</p>
+    </div>
+    <div class="mfoot"><button class="btn sec" onclick="closeModal()">Cancel</button>
+      <button class="btn danger" id="confirmSend">Send L${sev} alert</button></div>`);
+  $("#confirmSend").onclick=()=>{closeModal();fireIncident(sev,loc,what);};
+}
+function fireIncident(sev,loc,what){
+  // API: POST /incidents  {type,sev,loc,what,anonymous}
+  const id="INC-"+Math.floor(100000+Math.random()*899999);
+  const parallel=sev>=2;
+  const chain=NODES.slice().sort((a,b)=>a.order-b.order).map((n,i)=>({
+    node:n.id, state:(i===0||parallel)?"notified":"idle",
+    notifiedAt:(i===0||parallel)?"now":null, ackAt:null, lat:(i===0||parallel)?"waiting":"—"
+  }));
+  const inc={id,type:state.reportType,sev,loc,what,reporter:state.reportAnon?"Anonymous":ROLE_META[state.role].name,
+    anon:state.reportAnon,status:"active",created:"now",createdFull:"Just now",chain,closeReason:null};
+  INCIDENTS.unshift(inc);
+  AUDIT_USER.unshift({t:"now",who:state.reportAnon?"Anonymous":ROLE_META[state.role].name,act:"Reported incident",tgt:`${id} · severity L${sev}`});
+  state.activeIncident=id; state.reportType=null; state.reportAnon=false; state.view="live";
+  toast(`Alert sent — ${id} · ${parallel?'all contacts notified':'first contact notified'}`);
+  render();
+}
+
+/* ============ LIVE TREE ============ */
+function viewLive(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>Live tree`;
+  $("#title").textContent="Live escalation tree";
+  $("#subtitle").textContent=(state.role==="member")
+    ? "All active incidents in your tree, with real-time acknowledgement status. This is the anti-rumour view."
+    : "Who's been alerted and who has acknowledged — updating in real time. This is the anti-rumour view.";
+  const actives=INCIDENTS.filter(i=>i.status==="active");
+  const inc=INCIDENTS.find(i=>i.id===state.activeIncident)||actives[0]||INCIDENTS[0];
+  if(!inc){$("#screen").innerHTML=`<div class="card pad muted">No incidents yet.</div>`;return;}
+  // incident selector tabs
+  let h="";
+  if(INCIDENTS.length>1){
+    h+=`<div class="tabs" style="margin-bottom:14px">`+INCIDENTS.map(i=>`<button data-inc="${i.id}" class="${i.id===inc.id?'on':''}">${sevTag(i.sev)} ${i.id} ${i.status==='resolved'?'✓':''}</button>`).join("")+`</div>`;
+  }
+  const acked=inc.chain.filter(c=>c.state==="ackd").length;
+  h+=`<div class="card pad" style="margin-bottom:14px">
+    <div class="inline" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div class="inline" style="gap:11px">${sevTag(inc.sev)}<b class="mono" style="font-size:16px">${inc.id}</b>
+        <span class="statetag ${inc.status==='active'?'st-active':'st-resolved'}">${inc.status}</span></div>
+      <div style="text-align:right"><div class="muted" style="font-size:11px">Acknowledged</div><div style="font-size:22px;font-weight:800">${acked}<span class="muted" style="font-size:13px">/${inc.chain.length}</span></div></div>
+    </div>
+    <div class="muted" style="font-size:12.5px;margin-top:8px">${inc.what} · ${inc.loc} · reported by ${inc.reporter} · ${inc.createdFull}</div>
+    ${inc.status==='resolved'&&inc.closeReason?`<div class="note good" style="margin:12px 0 0;background:var(--good-soft);border:1px solid #c2e6cd;color:var(--good)"><span class="ni">✓</span><div><b>Resolved.</b> ${inc.closeReason}</div></div>`:''}
+  </div>`;
+  // the tree
+  h+=`<div class="card pad"><div class="tree">`;
+  inc.chain.forEach((c,i)=>{
+    const n=node(c.node); const last=i===inc.chain.length-1;
+    const dotColor=c.state==="ackd"?"var(--l0)":c.state==="notified"?"var(--l1)":c.state==="escalated"?"var(--l2)":"#c8d2df";
+    h+=`<div class="tnode">
+      <div class="trail"><div class="tdot" style="background:${dotColor}"></div>${last?'':'<div class="tline"></div>'}</div>
+      <div class="tcard ${c.state==='ackd'?'ackd':''}">
+        <div class="av">${n.name[0]}</div>
+        <div class="who"><b>${n.name} ${i===0?'<span class="tag">1st</span>':i===1?'<span class="tag">2nd</span>':'<span class="tag">3rd</span>'}</b><div class="role">${n.role}</div></div>
+        <div class="stcol">
+          <span class="statetag ${stateCls[c.state]}">${stateLabel[c.state]}</span>
+          ${c.state==="ackd"?`<span class="lat">at ${c.ackAt} · ${c.lat}</span>`:c.state==="notified"?`<span class="lat">${c.lat}</span>`:`<span class="lat">—</span>`}
+          ${(inc.status==='active'&&c.state==='notified'&&can('acknowledge'))?`<button class="btn good sm" data-ack="${c.node}">✓ Acknowledge</button>`:''}
+        </div>
+      </div></div>`;
+  });
+  h+=`</div>`;
+  // actions
+  if(inc.status==='active'&&can('close')){
+    h+=`<div class="actions" style="margin-top:14px"><button class="btn good" id="closeBtn">✓ Close incident</button>
+        <button class="btn sec" onclick="state.view='metrics';render()">▧ View metrics</button></div>`;
+  } else if(inc.status==='resolved'&&can('reopen')){
+    h+=`<div class="actions" style="margin-top:14px"><button class="btn warn" id="reopenBtn">↺ Re-open incident</button></div>`;
+  }
+  h+=`</div>`;
+  $("#screen").innerHTML=h;
+  $$("[data-inc]").forEach(b=>b.onclick=()=>{state.activeIncident=b.dataset.inc;render();});
+  $$("[data-ack]").forEach(b=>b.onclick=()=>{
+    // API: POST /ack {incident_id,node_id}
+    const c=inc.chain.find(x=>x.node===b.dataset.ack);
+    c.state="ackd";c.ackAt="now";c.lat="just now";
+    AUDIT_USER.unshift({t:"now",who:node(b.dataset.ack).name,act:"Acknowledged",tgt:`${inc.id}`});
+    toast(`${node(b.dataset.ack).name.split(' ')[0]} acknowledged ${inc.id}`);render();
+  });
+  const cb=$("#closeBtn"); if(cb) cb.onclick=()=>closeIncidentModal(inc);
+  const rb=$("#reopenBtn"); if(rb) rb.onclick=()=>{
+    // API: POST /incidents/{id}/reopen
+    inc.status="active";inc.closeReason=null;
+    AUDIT_USER.unshift({t:"now",who:ROLE_META[state.role].name,act:"Re-opened incident",tgt:inc.id});
+    toast(`${inc.id} re-opened`);render();
+  };
+}
+const CLOSE_REASONS=["Resolved — service restored","False positive","Duplicate incident","Confirmed & handled (e.g. phishing blocked)","Other"];
+function closeIncidentModal(inc){
+  openModal(`<div class="mhead"><h3>Close ${inc.id}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="mbody">
+      <div class="field"><label>Reason for closing</label><select id="clReason">${CLOSE_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>
+      <div class="field" id="otherWrap" style="display:none"><label>Describe (Other)</label><input id="clOther" placeholder="Enter reason"></div>
+      <div class="note blue"><span class="ni">ℹ</span><div>Everyone alerted <b>and the reporter</b> will be notified that this incident is resolved. Full history is retained for ${CONFIG.retentionMonths} months.</div></div>
+    </div>
+    <div class="mfoot"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn good" id="doClose">Close incident</button></div>`);
+  $("#clReason").onchange=e=>{$("#otherWrap").style.display=e.target.value==="Other"?"":"none";};
+  $("#doClose").onclick=()=>{
+    // API: POST /incidents/{id}/close {reason}
+    let reason=$("#clReason").value; if(reason==="Other")reason=$("#clOther").value||"Other";
+    inc.status="resolved";inc.closeReason=reason;
+    AUDIT_USER.unshift({t:"now",who:ROLE_META[state.role].name,act:"Closed incident",tgt:`${inc.id} · reason: ${reason}`});
+    closeModal();toast(`${inc.id} closed · everyone notified`);render();
+  };
+}
+
+/* ============ INCIDENT LOG ============ */
+function viewLog(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>Incident log`;
+  $("#title").textContent = state.role==="reporter" ? "My reports" : "Incident log";
+  $("#subtitle").textContent = state.role==="reporter"
+    ? "Incidents you've raised and their current status. You're notified when they're resolved."
+    : `Every incident, timestamped and retained ${CONFIG.retentionMonths} months for audit.${state.role==='auditor'?' Read-only.':''}`;
+  let list=INCIDENTS;
+  if(state.role==="reporter") list=INCIDENTS.filter(i=>i.reporter===ROLE_META.reporter.name||i.reporter==="S. Menon");
+  if(can("downloadReport")) $("#topActions").innerHTML=`<button class="btn sec sm" onclick="toast('Exporting log as CSV…')">⤓ Export CSV</button>`;
+  let h=`<div class="tblwrap"><table class="tbl"><thead><tr>
+    <th>ID</th><th>Time</th><th>Sev</th><th>Type</th><th>Location</th><th>Reporter</th><th>ACK</th><th>Status</th><th></th></tr></thead><tbody>`;
+  list.forEach(i=>{
+    const acked=i.chain.filter(c=>c.state==="ackd").length;
+    h+=`<tr class="clk" data-open="${i.id}">
+      <td><b class="mono">${i.id}</b></td><td class="muted">${i.createdFull}</td><td>${sevTag(i.sev)}</td>
+      <td>${typeById(i.type)?.name||i.type}</td><td>${i.loc}</td><td>${i.reporter}</td>
+      <td class="mono">${acked}/${i.chain.length}</td>
+      <td><span class="statetag ${i.status==='active'?'st-active':'st-resolved'}">${i.status}</span></td>
+      <td class="muted">Open ▸</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  if(!list.length) h=`<div class="card pad muted">No incidents to show.</div>`;
+  $("#screen").innerHTML=h;
+  $$("[data-open]").forEach(r=>r.onclick=()=>{state.activeIncident=r.dataset.open;state.view=ROLE_META[state.role].views.includes("live")?"live":"log";if(state.view==="live")render();else openIncidentReadonly(r.dataset.open);});
+}
+function openIncidentReadonly(id){
+  const inc=INCIDENTS.find(i=>i.id===id);
+  openModal(`<div class="mhead"><h3>${sevTag(inc.sev)} ${inc.id}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="mbody">
+      <p style="font-size:13px">${inc.what}</p>
+      <p class="muted" style="font-size:12px;margin-top:6px">${inc.loc} · reported by ${inc.reporter} · ${inc.createdFull}</p>
+      <p class="eyebrow" style="margin-top:14px">Escalation timeline</p>
+      ${inc.chain.map(c=>{const n=node(c.node);return `<div class="inline" style="justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)"><span><b>${n.name}</b> <span class="muted">${n.role.split('–')[0]}</span></span><span class="statetag ${stateCls[c.state]}">${stateLabel[c.state]}${c.ackAt?' · '+c.ackAt:''}</span></div>`;}).join("")}
+      ${inc.closeReason?`<div class="note good" style="margin-top:12px;background:var(--good-soft);border:1px solid #c2e6cd;color:var(--good)"><span class="ni">✓</span><div>${inc.closeReason}</div></div>`:''}
+    </div><div class="mfoot"><button class="btn sec" onclick="closeModal()">Close</button></div>`);
+}
+/* ============ MY CALL TREE (member slice) ============ */
+function viewMyTree(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>My call tree`;
+  $("#title").textContent="My call tree";
+  $("#subtitle").textContent="You see only your part of the chain — the person above you, your backup, and who reports to you. You can edit only below yourself.";
+  const me=NODES.find(n=>n.name===ROLE_META.member.name)||NODES[0];
+  const parent=me.parent?node(me.parent):null;
+  const backup=me.backup?node(me.backup):null;
+  const reports=NODES.filter(n=>n.parent===me.id&&n.id!==me.backup);
+  const card=(n,tag,me2)=>`<div class="tcard ${me2?'ackd':''}" style="${me2?'border-color:var(--brand);background:var(--brand-soft)':''}">
+    <div class="av">${n.name[0]}</div><div class="who"><b>${n.name}</b><div class="role">${n.role}</div></div>
+    <div class="mono" style="font-size:11.5px;color:var(--muted);text-align:right">${n.email}<br>${n.phone}</div></div>`;
+  let h=`<div class="card pad">`;
+  if(parent){h+=`<p class="eyebrow">Escalates up to</p>${card(parent)}`;}
+  h+=`<p class="eyebrow" style="margin-top:14px">You</p>${card(me,'',true)}`;
+  if(backup){h+=`<p class="eyebrow" style="margin-top:14px">Your backup</p>${card(backup)}`;}
+  if(reports.length){h+=`<p class="eyebrow" style="margin-top:14px">Reports to you</p>${reports.map(r=>card(r)).join("")}`;}
+  h+=`<div class="note blue" style="margin-top:16px"><span class="ni">ℹ</span><div>Hierarchy-scoped editing: you can add, replace or cover people <b>below</b> you (e.g. leave cover), but not those above you. Admins can edit anywhere.</div></div>`;
+  if(can("editTreeBelow")) h+=`<div class="actions" style="margin-top:14px"><button class="btn ghost sm" onclick="leaveCoverModal()">↪ Set leave cover</button></div>`;
+  h+=`</div>`;
+  $("#screen").innerHTML=h;
+}
+function leaveCoverModal(){
+  openModal(`<div class="mhead"><h3>Set temporary leave cover</h3><button class="x" onclick="closeModal()">×</button></div>
+   <div class="mbody">
+     <div class="field"><label>Person going on leave</label><select>${NODES.map(n=>`<option>${n.name}</option>`).join("")}</select></div>
+     <div class="field"><label>Covered by</label><select>${NODES.map(n=>`<option>${n.name}</option>`).join("")}</select></div>
+     <div class="note amber"><span class="ni">ℹ</span><div>Temporary replacement stays until manually undone. The person removed and the stand-in are both notified. This change is audit-logged.</div></div>
+   </div>
+   <div class="mfoot"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="closeModal();toast('Leave cover set · both parties notified')">Apply cover</button></div>`);
+}
+
+/* ============ FULL CALL TREE (admin) ============ */
+function viewFullTree(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>Full call tree`;
+  $("#title").textContent="Full call tree — IT / Cyber";
+  $("#subtitle").textContent=`Admin view: the complete escalation chain, editable end to end. ${NODES.length} people.`;
+  $("#topActions").innerHTML=`<button class="btn ghost sm" onclick="uploadTemplateModal()">⤒ Upload template</button><button class="btn sec sm" onclick="downloadSampleTemplate()">⤓ Sample template</button><button class="btn sec sm" onclick="toast('Exporting matrix as CSV…')">⇱ Export matrix</button>`;
+  const ordered=NODES.slice().sort((a,b)=>a.order-b.order);
+  let h=`<div class="tblwrap"><table class="tbl"><thead><tr>
+    <th>#</th><th>Name</th><th>Role</th><th>Email</th><th>Phone</th><th>Backup</th><th>Actions</th></tr></thead><tbody>`;
+  ordered.forEach((n,i)=>{
+    h+=`<tr><td><span class="tag">${i+1}${i===0?'st':i===1?'nd':'rd'}</span></td>
+      <td><b>${n.name}</b></td><td class="muted">${n.role}</td>
+      <td class="mono" style="font-size:11.5px">${n.email}</td><td class="mono" style="font-size:11.5px">${n.phone}</td>
+      <td class="muted">${n.backup?node(n.backup).name.split(' ')[0]:'—'}</td>
+      <td><div class="inline"><button class="btn sec sm" data-edit="${n.id}">Edit</button>${i>0?`<button class="btn danger sm" data-del="${n.id}">Remove</button>`:''}</div></td></tr>`;
+  });
+  h+=`</tbody></table></div>
+    <div class="actions" style="margin-top:14px"><button class="btn primary" id="addNode">+ Add person</button></div>
+    <div class="note blue" style="margin-top:14px"><span class="ni">ℹ</span><div>The escalation order defines who is alerted first. Sequential levels (L0/L1) contact people in this order; parallel levels (L2/L3) alert everyone at once. Changes are audit-logged.</div></div>`;
+  $("#screen").innerHTML=h;
+  $("#addNode").onclick=()=>editNodeModal(null);
+  $$("[data-edit]").forEach(b=>b.onclick=()=>editNodeModal(b.dataset.edit));
+  $$("[data-del]").forEach(b=>b.onclick=()=>{
+    const n=node(b.dataset.del);
+    openModal(`<div class="mhead"><h3>Remove ${n.name}?</h3><button class="x" onclick="closeModal()">×</button></div>
+      <div class="mbody"><div class="note amber"><span class="ni">⚠</span><div>This removes ${n.name} from the IT/Cyber escalation chain. People linked to them will be re-pointed. This is audit-logged.</div></div></div>
+      <div class="mfoot"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn danger" onclick="doDeleteNode('${n.id}')">Remove person</button></div>`);
+  });
+}
+function doDeleteNode(id){
+  NODES=NODES.filter(n=>n.id!==id);
+  NODES.forEach((n,i)=>n.order=i+1);
+  AUDIT_CFG.unshift({t:"now",who:ROLE_META[state.role].name,act:"Removed node from tree",tgt:id});
+  closeModal();toast("Person removed from tree");render();
+}
+function editNodeModal(id){
+  const n=id?node(id):{name:"",role:"",email:"",phone:"",backup:null};
+  const isNew=!id;
+  openModal(`<div class="mhead"><h3>${isNew?'Add person':'Edit '+n.name}</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="mbody">
+      <div class="field"><label>Full name</label><input id="eName" value="${n.name}" placeholder="e.g. Priya Sharma"></div>
+      <div class="field"><label>Role / title</label><input id="eRole" value="${n.role}" placeholder="e.g. Security Analyst"></div>
+      <div class="grid2"><div class="field"><label>Email</label><input id="eEmail" value="${n.email}" placeholder="name@sodexo.com"></div>
+      <div class="field"><label>Phone</label><input id="ePhone" value="${n.phone}" placeholder="+91 ..."></div></div>
+      <div class="field"><label>Backup (covers if no ACK)</label><select id="eBackup"><option value="">— none —</option>${NODES.filter(x=>x.id!==id).map(x=>`<option value="${x.id}" ${n.backup===x.id?'selected':''}>${x.name}</option>`).join("")}</select></div>
+      <div class="note blue"><span class="ni">ℹ</span><div>Fields map to LDAP attributes (name→displayName, email→mail, role→title) so Phase 2 directory sync drops in cleanly.</div></div>
+    </div>
+    <div class="mfoot"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn primary" id="saveNode">${isNew?'Add person':'Save changes'}</button></div>`);
+  $("#saveNode").onclick=()=>{
+    const data={name:$("#eName").value,role:$("#eRole").value,email:$("#eEmail").value,phone:$("#ePhone").value,backup:$("#eBackup").value||null};
+    if(!data.name){toast("Name is required");return;}
+    if(isNew){
+      const nid="n"+Date.now();
+      const last=NODES.slice().sort((a,b)=>a.order-b.order).slice(-1)[0];
+      NODES.push({id:nid,...data,parent:last?last.id:null,order:NODES.length+1});
+      AUDIT_CFG.unshift({t:"now",who:ROLE_META[state.role].name,act:"Added node to tree",tgt:data.name});
+      toast("Person added to tree");
+    } else {
+      Object.assign(node(id),data);
+      AUDIT_CFG.unshift({t:"now",who:ROLE_META[state.role].name,act:"Edited node",tgt:data.name});
+      toast("Changes saved");
+    }
+    closeModal();render();
+  };
+}
+function downloadSampleTemplate(){
+  const rows=[
+    ["order","name","role","email","phone","backup_name","level","mode","timeout_value","timeout_unit","reminder_value","reminder_unit","retries"],
+    ["1","Prashant Kamble","Technical Administrator - Network","prashant.kamble@sodexo.com","+91 99677 59639","Nurul Qureshi","0","Sequential","30","min","10","min","2"],
+    ["2","Nurul Qureshi","Lead - Infrastructure Security & Compliance","Nurul.QURESHI@sodexo.com","+91 98198 48222","Anupam Singh","1","Sequential","15","min","5","min","3"],
+    ["3","Anupam Singh","Tech Data Digital & Innovation Director","Anupam.Singh@sodexo.com","+91 86188 79550","","2","Parallel","10","min","5","min","3"],
+    ["","","","","","","3","Parallel","5","min","2","min","4"],
+  ];
+  const csv=rows.map(r=>r.map(c=>/[",]/.test(c)?`"${c}"`:c).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="sentinel_escalation_matrix_template.csv";a.click();
+  URL.revokeObjectURL(url);toast("Sample template downloaded");
+}
+function uploadTemplateModal(){
+  openModal(`<div class="mhead"><h3>Upload escalation matrix</h3><button class="x" onclick="closeModal()">×</button></div>
+    <div class="mbody">
+      <div class="filedrop" id="drop"><div class="big">⤒</div><p style="font-weight:700;margin:8px 0 3px">Drop CSV / Excel here or click to browse</p><p class="muted" style="font-size:12px">The template carries people <b>and</b> all configurable parameters (timeouts, reminders, retries) with editable defaults.</p><input type="file" id="fileIn" accept=".csv,.xlsx,.xls" style="display:none"></div>
+      <div id="valResult"></div>
+      <div class="inline" style="margin-top:12px"><button class="btn sec sm" onclick="downloadSampleTemplate()">⤓ Download sample template first</button></div>
+      <div class="note blue" style="margin-top:12px"><span class="ni">ℹ</span><div>On upload, the file is <b>validated</b> — every person needs a valid parent, no circular reporting, positive timeouts — and rejected with clear errors if broken.</div></div>
+    </div>
+    <div class="mfoot"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn primary" id="applyUpload" disabled>Apply upload</button></div>`);
+  const drop=$("#drop"),fileIn=$("#fileIn");
+  drop.onclick=()=>fileIn.click();
+  fileIn.onchange=()=>{
+    const f=fileIn.files[0]; if(!f)return;
+    // API: POST /trees/upload (multipart)  -> server validates & returns parsed tree
+    $("#valResult").innerHTML=`<div class="note blue" style="margin-top:12px"><span class="ni">⏳</span><div>Validating <b>${f.name}</b>…</div></div>`;
+    setTimeout(()=>{
+      $("#valResult").innerHTML=`<div class="note good" style="margin-top:12px;background:var(--good-soft);border:1px solid #c2e6cd;color:var(--good)"><span class="ni">✓</span><div><b>${f.name} validated.</b> 3 people, 4 severity levels, no circular references. Ready to apply.</div></div>`;
+      $("#applyUpload").disabled=false;
+    },900);
+  };
+  $("#applyUpload").onclick=()=>{
+    AUDIT_CFG.unshift({t:"now",who:ROLE_META[state.role].name,act:"Uploaded escalation matrix",tgt:"via template"});
+    closeModal();toast("Escalation matrix updated from template");render();
+  };
+}
+
+/* ============ CONFIGURATION ============ */
+function viewConfig(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>Configuration`;
+  $("#title").textContent="Configuration";
+  $("#subtitle").textContent="Per-level timeouts and reminders, incident-type severity mapping, and retention. Admin-only. All changes are audit-logged.";
+  let h=`<div class="tabs" id="cfgTabs">
+    <button data-ct="esc" class="on">Escalation levels</button>
+    <button data-ct="sev">Severity mapping</button>
+    <button data-ct="gen">General</button></div>`;
+  // escalation levels
+  h+=`<div class="tabpane on" id="ct-esc"><div class="card">
+    <div class="cfgrow" style="font-weight:800;color:var(--muted);font-size:11px;text-transform:uppercase"><div>Level</div><div>Escalate after</div><div>Remind every</div><div>Stop after</div></div>`;
+  CONFIG.levels.forEach(l=>{
+    h+=`<div class="cfgrow">
+      <div class="cl">${sevTag(l.lvl)} ${SEV_NAME[l.lvl]}<small>${l.mode} notification</small></div>
+      <div class="miniinput"><input value="${l.timeout}" data-cfg="timeout" data-lvl="${l.lvl}"><select data-cfg="tunit" data-lvl="${l.lvl}">${["sec","min","hr"].map(u=>`<option ${l.tunit===u?'selected':''}>${u}</option>`).join("")}</select></div>
+      <div class="miniinput"><input value="${l.remind}" data-cfg="remind" data-lvl="${l.lvl}"><select data-cfg="runit" data-lvl="${l.lvl}">${["sec","min","hr"].map(u=>`<option ${l.runit===u?'selected':''}>${u}</option>`).join("")}</select></div>
+      <div class="miniinput"><input value="${l.retries}" data-cfg="retries" data-lvl="${l.lvl}"><span class="u">reminders</span></div>
+    </div>`;
+  });
+  h+=`</div>
+    <div class="note blue" style="margin-top:14px"><span class="ni">ℹ</span><div><b>Escalate after</b> = no acknowledgement in this time → next person. <b>Remind every</b> = keep nudging the original person. <b>Stop after</b> = reminders cease after N tries (or on ACK / close). If nobody in the whole chain responds, the admin is alarmed.</div></div>
+    <div class="actions" style="margin-top:6px"><button class="btn primary" id="saveEsc">Save escalation config</button></div></div>`;
+  // severity mapping
+  h+=`<div class="tabpane" id="ct-sev"><div class="tblwrap"><table class="tbl"><thead><tr><th>Incident type</th><th>Description</th><th>Default severity</th></tr></thead><tbody>`;
+  TYPES.forEach(t=>{
+    h+=`<tr><td><b>${t.name}</b></td><td class="muted">${t.desc}</td>
+      <td><select data-sevmap="${t.id}">${[0,1,2,3].map(s=>`<option value="${s}" ${t.sev===s?'selected':''}>L${s} · ${SEV_NAME[s]}</option>`).join("")}</select></td></tr>`;
+  });
+  h+=`</tbody></table></div>
+    <div class="note blue" style="margin-top:14px"><span class="ni">ℹ</span><div>Severity is pre-filled from the incident type when reporting. The reporter or anyone in the chain can override it at report time — overrides are logged.</div></div>
+    <div class="actions"><button class="btn primary" id="saveSev">Save severity mapping</button></div></div>`;
+  // general
+  h+=`<div class="tabpane" id="ct-gen"><div class="card pad" style="max-width:460px">
+    <div class="field"><label>Re-open window</label><div class="miniinput"><input value="${CONFIG.reopenWindow}" id="genReopen" style="width:64px"><select id="genReopenU">${["hours","days"].map(u=>`<option ${CONFIG.reopenUnit===u?'selected':''}>${u}</option>`).join("")}</select></div><p class="muted" style="font-size:11.5px;margin-top:6px">Resolved incidents can be re-opened within this window by the reporter (if not anonymous) or an admin.</p></div>
+    <div class="field"><label>Audit retention</label><div class="miniinput"><input value="${CONFIG.retentionMonths}" id="genRet" style="width:64px"><span class="u">months (minimum)</span></div></div>
+    <div class="actions"><button class="btn primary" id="saveGen">Save general config</button></div>
+  </div></div>`;
+  $("#screen").innerHTML=h;
+  $$("#cfgTabs button").forEach(b=>b.onclick=()=>{
+    $$("#cfgTabs button").forEach(x=>x.classList.toggle("on",x===b));
+    $$(".tabpane").forEach(p=>p.classList.toggle("on",p.id==="ct-"+b.dataset.ct));
+  });
+  $("#saveEsc").onclick=()=>{
+    $$("[data-cfg]").forEach(el=>{const l=CONFIG.levels[+el.dataset.lvl];l[el.dataset.cfg]=isNaN(+el.value)?el.value:(el.value.match(/^\d+$/)?+el.value:el.value);});
+    AUDIT_CFG.unshift({t:"now",who:ROLE_META[state.role].name,act:"Edited escalation config",tgt:"per-level timeouts/reminders"});
+    toast("Escalation config saved");
+  };
+  $("#saveSev").onclick=()=>{
+    $$("[data-sevmap]").forEach(el=>{typeById(el.dataset.sevmap).sev=+el.value;});
+    AUDIT_CFG.unshift({t:"now",who:ROLE_META[state.role].name,act:"Edited severity mapping",tgt:"incident-type → severity"});
+    toast("Severity mapping saved");
+  };
+  $("#saveGen").onclick=()=>{
+    CONFIG.reopenWindow=+$("#genReopen").value;CONFIG.reopenUnit=$("#genReopenU").value;CONFIG.retentionMonths=+$("#genRet").value;
+    AUDIT_CFG.unshift({t:"now",who:ROLE_META[state.role].name,act:"Edited general config",tgt:`reopen ${CONFIG.reopenWindow}${CONFIG.reopenUnit}, retention ${CONFIG.retentionMonths}mo`});
+    toast("General config saved");
+  };
+}
+
+/* ============ METRICS ============ */
+function viewMetrics(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>Metrics`;
+  $("#title").textContent="Metrics — IT / Cyber";
+  const scope=state.role==="member"?"Your team's response performance.":state.role==="auditor"?"Read-only performance data for audit and compliance.":"Organisation-wide response performance.";
+  $("#subtitle").textContent=scope+" MTTA and MTTR for compliance and improvement analysis.";
+  if(can("downloadReport")) $("#topActions").innerHTML=`<button class="btn primary sm" onclick="toast('Generating PDF report…')">⤓ Download PDF</button><button class="btn sec sm" onclick="toast('Exporting CSV…')">⤓ Download CSV</button>`;
+  const kpis=[
+    {l:"MTTA",v:"2<small> min</small>",d:"mean time to acknowledge",c:"up"},
+    {l:"MTTR",v:"38<small> min</small>",d:"mean time to resolution",c:"up"},
+    {l:"Ack rate",v:"94<small>%</small>",d:"alerts acknowledged",c:"up"},
+    {l:"Delivery rate",v:"100<small>%</small>",d:"alerts delivered",c:"up"},
+  ];
+  let h=`<div class="kpis">`+kpis.map(k=>`<div class="kpi"><div class="lbl">${k.l}</div><div class="val">${k.v}</div><div class="delta ${k.c}">${k.d}</div></div>`).join("")+`</div>`;
+  h+=`<div class="split">
+    <div class="card pad"><p class="eyebrow">Per-hop latency — INC-142307</p>
+      <div class="barrow"><div class="bl">Prashant · notify</div><div class="bar"><i style="width:4%;background:var(--l0)"></i></div><div class="bv">0s</div></div>
+      <div class="barrow"><div class="bl">Prashant · ACK</div><div class="bar"><i style="width:18%;background:var(--l0)"></i></div><div class="bv">34s</div></div>
+      <div class="barrow"><div class="bl" style="color:var(--l2)">Nurul · no ACK</div><div class="bar"><i style="width:70%;background:var(--l2)"></i></div><div class="bv">pending</div></div>
+      <div class="note amber" style="margin-top:12px"><span class="ni">⚠</span><div><b>Breaking node:</b> Nurul hasn't acknowledged — escalation to Anupam pending. This flags where the chain stalls.</div></div>
+    </div>
+    <div class="card pad"><p class="eyebrow">Resolution mix (last 30 days)</p>
+      <div class="barrow"><div class="bl">${sevTag(0)} Hazard</div><div class="bar"><i style="width:40%;background:var(--l0)"></i></div><div class="bv">12</div></div>
+      <div class="barrow"><div class="bl">${sevTag(1)} Minor</div><div class="bar"><i style="width:64%;background:var(--l1)"></i></div><div class="bv">19</div></div>
+      <div class="barrow"><div class="bl">${sevTag(2)} Major</div><div class="bar"><i style="width:30%;background:var(--l2)"></i></div><div class="bv">9</div></div>
+      <div class="barrow"><div class="bl">${sevTag(3)} Critical</div><div class="bar"><i style="width:10%;background:var(--l3)"></i></div><div class="bv">3</div></div>
+      <p class="muted" style="font-size:11.5px;margin-top:10px">43 incidents · avg MTTA 2m · avg MTTR 38m · 94% acknowledged.</p>
+    </div></div>`;
+  if(!can("downloadReport")) h+=`<div class="note blue" style="margin-top:14px"><span class="ni">ℹ</span><div>Report download &amp; sharing is available to admins. As a member you can view your team's metrics here.</div></div>`;
+  $("#screen").innerHTML=h;
+}
+
+/* ============ AUDIT ============ */
+function viewAudit(){
+  $("#crumb").innerHTML=`<b>IT / Cyber</b><span class="sep">›</span>Audit trail`;
+  $("#title").textContent="Audit trail";
+  $("#subtitle").textContent=`Every user action and configuration change, timestamped. Separate logs for clarity. Retained ${CONFIG.retentionMonths} months.${state.role==='auditor'?' Read-only.':''}`;
+  $("#topActions").innerHTML=`<button class="btn sec sm" onclick="toast('Exporting audit log…')">⤓ Export</button>`;
+  const tbl=(rows)=>`<div class="tblwrap"><table class="tbl"><thead><tr><th>Time</th><th>Who</th><th>Action</th><th>Target</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="mono muted">${r.t}</td><td><b>${r.who}</b></td><td>${r.act}</td><td class="muted">${r.tgt}</td></tr>`).join("")}</tbody></table></div>`;
+  $("#screen").innerHTML=`
+    <div class="section-h" style="margin-top:0"><h3>User actions</h3><span class="hint">report · acknowledge · close · reopen · override</span></div>${tbl(AUDIT_USER)}
+    <div class="section-h"><h3>Configuration changes</h3><span class="hint">timeouts · severity mapping · tree edits · uploads</span></div>${tbl(AUDIT_CFG)}`;
+}
+
+/* ============ go ============ */
+boot();
+</script>
+</body>
+</html>

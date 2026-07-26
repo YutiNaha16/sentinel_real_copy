@@ -1,0 +1,213 @@
+// SENTINEL Crisis — data model (see specs/001-foundation-report/data-model.md).
+// Multi-tree + LDAP-ready from day one; only IT/Cyber is seeded in Phase 1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  REPORTER
+  AUDITOR
+}
+
+enum Severity {
+  L0
+  L1
+  L2
+  L3
+}
+
+enum IncidentStatus {
+  ACTIVE
+  RESOLVED
+}
+
+enum ChainState {
+  WAITING
+  NOTIFIED
+  ESCALATED
+  ACKNOWLEDGED
+}
+
+enum EscalationEventKind {
+  ESCALATION
+  REMINDER
+  ALARM
+  STANDDOWN
+}
+
+model User {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  passwordHash String
+  displayName  String
+  role         Role
+  nodeId       String?           @unique
+  node         Node?             @relation("UserNode", fields: [nodeId], references: [id])
+  incidents    Incident[]        @relation("Reporter")
+  auditActions AuditUserAction[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model CallTree {
+  id        String     @id @default(uuid())
+  key       String     @unique
+  name      String
+  nodes     Node[]
+  incidents Incident[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Node {
+  id          String   @id @default(uuid())
+  treeId      String
+  tree        CallTree @relation(fields: [treeId], references: [id])
+  displayName String // LDAP: displayName
+  title       String // LDAP: title
+  email       String // LDAP: mail
+  phone       String
+  order       Int // 1 = first contact
+  parentId    String? // LDAP: manager
+  parent      Node?    @relation("NodeParent", fields: [parentId], references: [id])
+  children    Node[]   @relation("NodeParent")
+  backupId    String?
+  backup      Node?    @relation("NodeBackup", fields: [backupId], references: [id])
+  backupOf    Node[]   @relation("NodeBackup")
+  user        User?    @relation("UserNode")
+  chainEntries IncidentChainEntry[]
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([treeId, order])
+}
+
+model IncidentType {
+  id              String     @id @default(uuid())
+  key             String     @unique
+  name            String
+  description     String
+  defaultSeverity Severity
+  active          Boolean    @default(true)
+  incidents       Incident[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Incident {
+  id             String         @id @default(uuid())
+  reference      String         @unique
+  treeId         String
+  tree           CallTree       @relation(fields: [treeId], references: [id])
+  typeId         String
+  type           IncidentType   @relation(fields: [typeId], references: [id])
+  severity       Severity
+  location       String         @default("(not specified)")
+  description    String
+  status         IncidentStatus @default(ACTIVE)
+  anonymous      Boolean        @default(false)
+  reporterUserId String?
+  reporter       User?          @relation("Reporter", fields: [reporterUserId], references: [id])
+  reporterLabel  String
+  createdAt      DateTime       @default(now())
+  adminAlarmedAt DateTime?
+  closeReason    String?
+  closedAt       DateTime?
+  chain          IncidentChainEntry[]
+  events         EscalationEvent[]
+  emails         EmailMessage[]
+}
+
+// Append-only user-action audit log (separate from config changes).
+model AuditUserAction {
+  id          String   @id @default(uuid())
+  at          DateTime @default(now())
+  actorLabel  String
+  actorUserId String?
+  actor       User?    @relation(fields: [actorUserId], references: [id])
+  action      String
+  target      String
+}
+
+// Reserved for E4/E13 (configuration changes) — not written in feature 001.
+model AuditConfigChange {
+  id         String   @id @default(uuid())
+  at         DateTime @default(now())
+  actorLabel String
+  action     String
+  target     String
+}
+
+// Per-incident chain state — drives the live escalation tree (Feature 002).
+model IncidentChainEntry {
+  id         String     @id @default(uuid())
+  incidentId String
+  incident   Incident   @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  nodeId     String
+  node       Node       @relation(fields: [nodeId], references: [id])
+  order      Int
+  state          ChainState @default(WAITING)
+  notifiedAt     DateTime?
+  ackAt          DateTime?
+  reminderCount  Int        @default(0)
+  lastRemindedAt DateTime?
+  ackToken       String?    @unique
+  createdAt      DateTime   @default(now())
+
+  @@unique([incidentId, nodeId])
+}
+
+// Per-severity escalation timing (Feature 003). Seeded; editing UI = Feature 007.
+model EscalationConfig {
+  id                 String   @id @default(uuid())
+  severity           Severity @unique
+  escalateAfterSec   Int
+  remindEverySec     Int
+  maxReminders       Int
+  adminAlarmAfterSec Int
+  updatedAt          DateTime @updatedAt
+}
+
+// Engine activity feed (Feature 003) — append-only.
+model EscalationEvent {
+  id         String              @id @default(uuid())
+  incidentId String
+  incident   Incident            @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  at         DateTime            @default(now())
+  kind       EscalationEventKind
+  message    String
+}
+
+// Generated alert emails (Feature 008) — the mock inbox + delivery record.
+model EmailMessage {
+  id           String    @id @default(uuid())
+  incidentId   String
+  incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  nodeId       String
+  toName       String
+  toEmail      String
+  subject      String
+  body         String
+  ackToken     String
+  ackLink      String
+  createdAt    DateTime  @default(now())
+  deliveredAt  DateTime?
+  failedReason String?
+}
+
+// General app configuration (Feature 004+). Single row; editing UI = Feature 007.
+model AppConfig {
+  id                Int      @id @default(1)
+  reopenWindowHours Int      @default(72)
+  retentionMonths   Int      @default(18)
+  updatedAt         DateTime @updatedAt
+}
