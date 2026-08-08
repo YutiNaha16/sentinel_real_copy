@@ -1,9 +1,7 @@
-# SENTINEL — Crisis Call-Tree & Escalation System
-### End-of-Project Report
+# SENTINEL
+## Crisis Call-Tree & Escalation System — Project Report
 
-**Author:** Yuti Naha
-**Project:** SENTINEL Crisis Notification System (Sodexo IT/Cyber — Phase 1 Pilot)
-**Repository:** `YutiNaha16/sentinel_real_copy`
+*Prepared by Yuti Naha*
 
 ---
 
