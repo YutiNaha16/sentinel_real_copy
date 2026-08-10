@@ -1,0 +1,23 @@
+# SENTINEL backend (NestJS + Prisma) — production container.
+# Builds the API and runs database migrations on start.
+FROM node:22-slim
+
+# Prisma needs openssl at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the whole monorepo (node_modules/dist excluded via .dockerignore) and install.
+COPY . .
+RUN npm install
+
+# Generate the Prisma client and build the API.
+WORKDIR /app/apps/api
+RUN npx prisma generate && npm run build
+
+EXPOSE 3000
+
+# On start: apply DB migrations, then run the API.
+# (Seed once separately — see DEPLOYMENT.md — so a restart never re-seeds.)
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
