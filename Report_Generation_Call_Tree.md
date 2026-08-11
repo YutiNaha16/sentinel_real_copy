@@ -305,6 +305,7 @@ These principles are the reason the system is trustworthy, honest, and built to 
 - Metrics, exports, complete audit trail
 - Real WhatsApp alerts (proven), plus the broadcast "Initiate Call Tree" feature
 - Automated tests over the critical paths
+- A complete **deployment package** (Docker + guide) so the IT team can host it easily
 
 **Deliberately reserved for Phase 2 (not a limitation, a roadmap):**
 - SMS / WhatsApp at company scale and a mobile app
@@ -316,13 +317,17 @@ These principles are the reason the system is trustworthy, honest, and built to 
 
 ## 16. Path to Production (Deployment)
 
-Moving from the pilot to a company server is a **deployment and configuration** task, not a rewrite:
+Moving from the pilot to a company server is a **deployment and configuration** task, not a rewrite. To make this straightforward, I have prepared a complete **deployment package** — a Docker setup (`Dockerfile.api`, `Dockerfile.web`, `docker-compose.yml`) plus a step-by-step guide (`DEPLOYMENT.md`) and a configuration template (`.env.deploy.example`) — so the company's IT team can host the whole stack (database, backend, and frontend) with a single command.
+
+The deployment steps are:
 
 1. The company provides the infrastructure — a server or cloud, a managed database, and a web address with a security certificate.
-2. The application is packaged into a **standard container** that runs identically anywhere.
-3. It is deployed and configured by pointing settings at the company's own database, messaging, and address — **no code changes**.
-4. The database tables are created, single-sign-on and the domain are connected, and it is tested with dummy data.
+2. The application is packaged into **standard containers** that run identically anywhere (provided and ready in the repository).
+3. It is started with one command and configured by pointing settings at the company's own database, messaging, and address — **no code changes**.
+4. The database tables are created automatically, the starter data is seeded, single-sign-on and the domain are connected, and it is tested with dummy data.
 5. After the security review passes, real data is loaded and it goes live.
+
+**Connecting WhatsApp is configuration, not code:** the messaging channel is already built in; the IT team simply supplies their own WhatsApp/Twilio credentials as settings and restarts — no source changes required.
 
 The application is self-contained: it runs in its own isolated space and touches only its own database, so it cannot affect other systems on the server.
 
