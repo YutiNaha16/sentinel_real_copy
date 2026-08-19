@@ -32,12 +32,9 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# Claude Code local/credential files (keep shared skills & commands)
-.claude/settings.local.json
-.claude/*.local.json
-
-# Spec Kit runtime scratch (keep templates, memory, scripts, workflows)
-.specify/**/cache/
+# Development tooling — local only, not part of the application
+.claude/
+.specify/integrations/
 
 # Downloaded CSV exports (dev testing)
 /*.csv
